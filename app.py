@@ -50,7 +50,7 @@ def test_rrrocket():
         }), 500
 
 
-@app.route("/analyze", methods=["POST"])
+@app.route("/analyze", methods=["GET", "POST"])
 def analyze():
 
     if "replay" not in request.files:
