@@ -6,7 +6,7 @@ import json
 
 app = Flask(__name__)
 
-RRROCKET = os.environ.get("RRROCKET_PATH", "../rrrocket")
+RRROCKET = os.environ.get("RRROCKET_PATH", "./rrrocket")
 
 
 @app.route("/", methods=["GET", "POST"])
