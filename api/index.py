@@ -6,7 +6,10 @@ import json
 
 app = Flask(__name__)
 
-RRROCKET = os.environ.get("RRROCKET_PATH", "./rrrocket")
+RRROCKET = os.environ.get(
+    "RRROCKET_PATH",
+    "./rrrocket"
+)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -46,10 +49,10 @@ def analyze():
         }), 400
 
     temp_path = None
-    json_path = None
 
     try:
 
+        # Crear archivo temporal
         with tempfile.NamedTemporaryFile(
             suffix=".replay",
             delete=False
@@ -58,42 +61,51 @@ def analyze():
             replay.save(temp.name)
             temp_path = temp.name
 
-       resultado = subprocess.run(
-    [
-        RRROCKET,
-        temp_path
-    ],
-    capture_output=True,
-    text=True,
-    encoding="utf-8",
-    errors="replace"
-)
+        # Ejecutar rrrocket
+        resultado = subprocess.run(
+            [
+                RRROCKET,
+                temp_path
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
 
-if resultado.returncode != 0:
-    return jsonify({
-        "ok": False,
-        "error": resultado.stderr
-        or "rrrocket produjo un error."
-    }), 500
+        # Comprobar error de rrrocket
+        if resultado.returncode != 0:
 
-try:
-    datos = json.loads(
-        resultado.stdout
-    )
+            return jsonify({
+                "ok": False,
+                "error": (
+                    resultado.stderr
+                    or "rrrocket produjo un error."
+                ),
+                "stdout": resultado.stdout[:2000]
+            }), 500
 
-except json.JSONDecodeError:
+        # Intentar interpretar el resultado como JSON
+        try:
 
-    return jsonify({
-        "ok": False,
-        "error": "rrrocket no devolvió JSON válido.",
-        "stdout": resultado.stdout[:2000],
-        "stderr": resultado.stderr[:2000]
-    }), 500
+            datos = json.loads(
+                resultado.stdout
+            )
 
-return jsonify({
-    "ok": True,
-    "data": datos
-})
+        except json.JSONDecodeError:
+
+            return jsonify({
+                "ok": False,
+                "error": "rrrocket no devolvió JSON válido.",
+                "stdout": resultado.stdout[:5000],
+                "stderr": resultado.stderr[:5000]
+            }), 500
+
+        # Respuesta correcta
+        return jsonify({
+            "ok": True,
+            "data": datos
+        })
 
     except Exception as e:
 
@@ -104,14 +116,27 @@ return jsonify({
 
     finally:
 
-        if temp_path and os.path.exists(temp_path):
+        if temp_path:
+
             try:
-                os.remove(temp_path)
+
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+
             except Exception:
                 pass
 
-        if json_path and os.path.exists(json_path):
-            try:
-                os.remove(json_path)
-            except Exception:
-                pass
+
+if __name__ == "__main__":
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
