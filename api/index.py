@@ -58,43 +58,42 @@ def analyze():
             replay.save(temp.name)
             temp_path = temp.name
 
-        resultado = subprocess.run(
-            [RRROCKET, temp_path],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace"
-        )
+       resultado = subprocess.run(
+    [
+        RRROCKET,
+        temp_path
+    ],
+    capture_output=True,
+    text=True,
+    encoding="utf-8",
+    errors="replace"
+)
 
-        if resultado.returncode != 0:
-            return jsonify({
-                "ok": False,
-                "error": resultado.stderr
-                or "rrrocket produjo un error."
-            }), 500
+if resultado.returncode != 0:
+    return jsonify({
+        "ok": False,
+        "error": resultado.stderr
+        or "rrrocket produjo un error."
+    }), 500
 
-        json_path = os.path.splitext(
-            temp_path
-        )[0] + ".json"
+try:
+    datos = json.loads(
+        resultado.stdout
+    )
 
-        if not os.path.exists(json_path):
-            return jsonify({
-                "ok": False,
-                "error": "rrrocket no creó el archivo JSON."
-            }), 500
+except json.JSONDecodeError:
 
-        with open(
-            json_path,
-            "r",
-            encoding="utf-8"
-        ) as archivo:
+    return jsonify({
+        "ok": False,
+        "error": "rrrocket no devolvió JSON válido.",
+        "stdout": resultado.stdout[:2000],
+        "stderr": resultado.stderr[:2000]
+    }), 500
 
-            datos = json.load(archivo)
-
-        return jsonify({
-            "ok": True,
-            "data": datos
-        })
+return jsonify({
+    "ok": True,
+    "data": datos
+})
 
     except Exception as e:
 
