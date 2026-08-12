@@ -9,8 +9,12 @@ app = Flask(__name__)
 RRROCKET = os.environ.get("RRROCKET_PATH", "../rrrocket")
 
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def home():
+
+    if request.method == "POST":
+        return analyze()
+
     return jsonify({
         "ok": True,
         "service": "Washed AI Replay Analyzer",
