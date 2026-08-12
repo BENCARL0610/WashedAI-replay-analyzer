@@ -1,15 +1,26 @@
-import json
 import subprocess
+import tempfile
 import os
+import json
 
 
-RRROCKET = os.environ.get("RRROCKET_PATH", "rrrocket")
+RRROCKET = os.environ.get(
+    "RRROCKET_PATH",
+    "./rrrocket"
+)
 
 
 def analizar_replay(ruta_replay):
+
+    carpeta = os.path.dirname(ruta_replay)
+
     try:
+
         resultado = subprocess.run(
-            [RRROCKET, ruta_replay],
+            [
+                RRROCKET,
+                ruta_replay
+            ],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -17,32 +28,65 @@ def analizar_replay(ruta_replay):
         )
 
         if resultado.returncode != 0:
+
             return {
                 "ok": False,
-                "error": resultado.stderr or "rrrocket produjo un error."
+                "error": (
+                    resultado.stderr
+                    or "rrrocket produjo un error."
+                )
             }
 
-        try:
-            datos = json.loads(resultado.stdout)
-        except json.JSONDecodeError:
+
+        ruta_json = os.path.splitext(
+            ruta_replay
+        )[0] + ".json"
+
+
+        if not os.path.exists(ruta_json):
+
             return {
                 "ok": False,
-                "error": "rrrocket no devolvió JSON válido."
+                "error": (
+                    "rrrocket terminó correctamente, "
+                    "pero no creó el archivo JSON."
+                )
             }
+
+
+        with open(
+            ruta_json,
+            "r",
+            encoding="utf-8"
+        ) as archivo:
+
+            datos = json.load(
+                archivo
+            )
+
 
         return {
             "ok": True,
             "data": datos
         }
 
-    except FileNotFoundError:
-        return {
-            "ok": False,
-            "error": "No se encontró rrrocket en el servidor."
-        }
 
     except Exception as e:
+
         return {
             "ok": False,
             "error": str(e)
         }
+
+
+    finally:
+
+        if 'ruta_json' in locals():
+
+            try:
+
+                if os.path.exists(ruta_json):
+                    os.remove(ruta_json)
+
+            except Exception:
+                pass
