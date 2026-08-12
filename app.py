@@ -6,6 +6,8 @@ import json
 
 app = Flask(__name__)
 
+RRROCKET = os.environ.get("RRROCKET_PATH", "./rrrocket")
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -14,6 +16,34 @@ def home():
         "service": "Washed AI Replay Analyzer",
         "status": "online"
     })
+
+
+@app.route("/test-rrrocket", methods=["GET"])
+def test_rrrocket():
+
+    try:
+
+        resultado = subprocess.run(
+            [RRROCKET, "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        return jsonify({
+            "ok": resultado.returncode == 0,
+            "returncode": resultado.returncode,
+            "stdout": resultado.stdout[:2000],
+            "stderr": resultado.stderr[:2000]
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
 
 
 @app.route("/analyze", methods=["POST"])
@@ -52,26 +82,28 @@ def analyze():
             temp_path = temp.name
 
         resultado = subprocess.run(
-            [
-                "rrrocket",
-                temp_path
-            ],
+            [RRROCKET, temp_path],
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8",
+            errors="replace"
         )
 
         if resultado.returncode != 0:
+
             return jsonify({
                 "ok": False,
-                "error": resultado.stderr
+                "error": resultado.stderr or "rrrocket produjo un error."
             }), 500
 
         try:
+
             datos = json.loads(
                 resultado.stdout
             )
 
         except json.JSONDecodeError:
+
             return jsonify({
                 "ok": False,
                 "error": "rrrocket no devolvió JSON válido."
@@ -92,6 +124,7 @@ def analyze():
     finally:
 
         if temp_path and os.path.exists(temp_path):
+
             try:
                 os.remove(temp_path)
             except Exception:
