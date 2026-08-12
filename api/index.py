@@ -18,7 +18,7 @@ def home():
     })
 
 
-@app.route("/analyze", methods=["GET", "POST"])
+@app.route("/analyze", methods=["POST"])
 def analyze():
 
     if "replay" not in request.files:
